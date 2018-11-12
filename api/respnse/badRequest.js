@@ -1,29 +1,44 @@
 /**
- * 201 (CREATED) Response
+ * 400 (Bad Request) Handler
  *
  * Usage:
- * return res.created();
- * return res.created(data);
- * return res.created(data, 'auth/login');
+ * return res.badRequest();
+ * return res.badRequest(data);
+ * return res.badRequest(data, 'some/specific/badRequest/view');
  *
- * @param  {Object} data
- * @param  {String|Object} options
- *          - pass string to render specified view
+ * e.g.:
+ * ```
+ * return res.badRequest(
+ *   'Please choose a valid `password` (6-12 characters)',
+ *   'trial/signup'
+ * );
+ * ```
  */
 
-module.exports = function created (data, options) {
+module.exports = function badRequest(data, options) {
 
   // Get access to `req`, `res`, & `sails`
   var req = this.req;
   var res = this.res;
   var sails = req._sails;
 
-  sails.log.silly('res.created() :: Sending 201 ("CREATED") response');
-
   // Set status code
-  res.status(201);
+  res.status(400);
 
-  // If appropriate, serve data as JSON(P)
+  // Log error to console
+  if (data !== undefined) {
+    sails.log.verbose('Sending 400 ("Bad Request") response: \n',data);
+  }
+  else sails.log.verbose('Sending 400 ("Bad Request") response');
+
+  // Only include errors in response if application environment
+  // is not set to 'production'.  In production, we shouldn't
+  // send back any identifying information about errors.
+  if (sails.config.environment === 'production' && sails.config.keepResponseErrors !== true) {
+    data = undefined;
+  }
+
+  // If the user-agent wants JSON, always respond with JSON
   // If views are disabled, revert to json
   if (req.wantsJSON || sails.config.hooks.views === false) {
     return res.jsonx(data);
@@ -48,13 +63,14 @@ module.exports = function created (data, options) {
   // Otherwise try to guess an appropriate view, or if that doesn't
   // work, just send JSON.
   if (options.view) {
-    return res.view(options.view, { data: viewData, title: 'Created' });
+    return res.view(options.view, { data: viewData, title: 'Bad Request' });
   }
 
   // If no second argument provided, try to serve the implied view,
   // but fall back to sending JSON(P) if no view can be inferred.
-  else return res.guessView({ data: viewData, title: 'Created' }, function couldNotGuessView () {
+  else return res.guessView({ data: viewData, title: 'Bad Request' }, function couldNotGuessView () {
     return res.jsonx(data);
   });
 
 };
+
